@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ZK Dubbing Player</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+        body { background-color: #000; color: #fff; font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
+        .player-container { position: relative; width: 100%; max-width: 900px; height: 100vh; display: flex; justify-content: center; align-items: center; background: #000; }
+        
+        /* Logo Styling */
+        .brand-logo { position: absolute; top: 15px; left: 15px; width: 80px; z-index: 20; opacity: 0.85; pointer-events: none; }
+
+        video { width: 100%; max-height: 100vh; display: block; }
+
+        /* Floating Watermark */
+        #watermark {
+            position: absolute; top: 30%; left: 30%;
+            color: rgba(255, 255, 255, 0.3); font-size: 12px;
+            font-weight: bold; pointer-events: none; z-index: 15;
+            transition: all 1.5s ease-in-out; text-shadow: 1px 1px 2px #000;
+        }
+
+        #errorMsg { display: none; text-align: center; color: #ff4d4d; font-size: 16px; padding: 20px; }
+    </style>
+</head>
+<body>
+
+    <div class="player-container">
+        <!-- ZK Dubbing Logo -->
+        <img src="https://i.ibb.co/2Yp3CDq9/file-000000006f2c8211b20c6bedc9f9ac12.png" alt="ZK Logo" class="brand-logo">
+
+        <!-- Dynamic Watermark -->
+        <div id="watermark">ZK Dubbing Studio</div>
+
+        <!-- Video Player -->
+        <video id="animePlayer" controls controlsList="nodownload" disablePictureInPicture style="display: none;"></video>
+
+        <div id="errorMsg">Streaming link expired ya invalid hai.</div>
+    </div>
+
+    <script>
+        const tg = window.Telegram?.WebApp;
+        if (tg) tg.expand();
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const episodeId = urlParams.get('id');
+        const token = urlParams.get('token');
+
+        const user = tg?.initDataUnsafe?.user;
+        const viewerText = user ? `${user.username || user.first_name} (${user.id})` : 'Guest User';
+
+        // Watermark Movement
+        const wm = document.getElementById('watermark');
+        wm.innerText = `ZK Dubbing | ${viewerText}`;
+        setInterval(() => {
+            wm.style.top = Math.floor(Math.random() * 70) + 15 + '%';
+            wm.style.left = Math.floor(Math.random() * 60) + 10 + '%';
+        }, 4000);
+
+        async function loadEpisode() {
+            if (!episodeId) {
+                showError("Episode ID missing.");
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/get-episode-data?episodeId=${episodeId}&token=${token}`);
+                const data = await res.json();
+
+                if (data.success) {
+                    const player = document.getElementById('animePlayer');
+                    player.src = data.videoUrl;
+                    player.style.display = 'block';
+                } else {
+                    showError(data.message);
+                }
+            } catch (err) {
+                showError("Video load karne mein error aaya.");
+            }
+        }
+
+        function showError(msg) {
+            const errDiv = document.getElementById('errorMsg');
+            errDiv.innerText = msg;
+            errDiv.style.display = 'block';
+        }
+
+        loadEpisode();
+
+        // Anti-Piracy Protection
+        document.addEventListener('contextmenu', e => e.preventDefault());
+        document.addEventListener('keydown', e => {
+            if (e.keyCode === 123 || (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74)) || (e.ctrlKey && e.keyCode === 85)) {
+                e.preventDefault();
+                return false;
+            }
+        });
+    </script>
+</body>
+</html>
